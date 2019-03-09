@@ -1,2 +1,3 @@
 # SAG
-ICME2017  CROWDSOURCED TIME-SYNC VIDEO TAGGING USING SEMANTIC ASSOCIATION GRAPH
+This is the source code of SAG, which is used to extract the video tags from time-sync comments by a semantic associate graph (SAG).
+# Usage 
