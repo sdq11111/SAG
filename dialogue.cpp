@@ -6,7 +6,8 @@
 #include <cstring>
 #include <string>
 #include <algorithm>
-
+#include <sstream>
+#include <fstream>
 using namespace std;
 
 map <string, int> IDF;
@@ -28,7 +29,7 @@ void getIDF(char idfName[])
     }
     fclose(fp);
 }
-/* load the IDF score*/
+
 struct Word
 {
     string str;
@@ -38,15 +39,12 @@ struct Word
 class Info
 {
 private:
-    FILE *fp1, *fp2;
-    stringstream Num;
     string inputFile, inputClass;
-    char s[5000], st[5000];
-
+    string st, s;
     void cut(char s[], char st[])
     {
         int pos;
-        for (pos = 0; (s[pos] != ' ') & (s[pos] != '\n'); ++pos);
+        for (pos = 0; (s[pos] != ' ') && (s[pos] != '\n'); ++pos);
         for (int i = 0; i < pos; ++i)
         {
             st[i] = s[i];
@@ -56,8 +54,11 @@ private:
         for (int i = pos + 1; i < l; ++i)
         {
             s[i - (pos + 1)] = s[i];
+
         }
-        s[l - (pos + 1)] = 0;
+        if (l - (pos + 1) >= 0)
+            s[l - (pos + 1)] = 0;
+        else s[0] = 0;
     }
 
     bool checkUse(char c)
@@ -66,16 +67,25 @@ private:
             return true;
         return false;
     }
-    /* check the part of speech of each word in TSCs */
-    bool checkNoise(char s[])
+
+    bool checkNoise(string ss)
     {
-        char st[200];
-        char word[200];
+
+        char st[300];
+        char word[300];
         bool noise = true;
-        while(strlen(s))
+        memset(word, 0, sizeof(word));
+        char s[5000];
+        strcpy(s, ss.c_str());
+//        cout << "begin noise" <<endl;
+        while(strlen(s) && strcmp(s, "\n") != 0)
         {
+
+//            cout << "begin_s" << endl;
             memset(st, 0, sizeof(st));
             cut(s, st);
+//            cout <<s << endl;
+//            cout <<st << endl;
             int pos;
             for (pos = 0; st[pos] != '/'; ++pos);
             if (checkUse(st[pos + 1]))
@@ -95,15 +105,19 @@ private:
                 }
                 sentence[totalSentence][sentenceNum[totalSentence]++] = map1[tmp];
             }
+//            cout << "end_s" << endl;
         }
         if (!noise)
             ++totalSentence;
+//        cout << "Done check" << endl;
         return noise;
     }
-    /* If none of the words in a TSC is a meaningful word (according to the part of speech), then the TSC is noise.*/ 
-    void deal(char st[], int ti, int index)
+
+    void deal(string sst, int ti, int index)
     {
-        char stmp[100];
+        char st[5000];
+        strcpy(st, sst.c_str());
+        char stmp[300];
         int d = 0;
         while(strlen(st))
         {
@@ -116,12 +130,11 @@ private:
 public:
     int totalSentence, totalWord;
     int sentenceNum[5000], senti[5000];
-    int sentence[5000][200];
+    int sentence[5000][300];
     double vec[5000][400];
     Word word1[100000];
     map <string, int> map1;
-    string num;
-    string fileName, type;
+    string fileName;
     Info(string fileName)
     {
         inputFile.clear();
@@ -130,9 +143,13 @@ public:
         totalSentence = 0;
         totalWord = 0;
         memset(sentenceNum, 0, sizeof(sentenceNum));
+        memset(sentence, 0, sizeof(sentence));
+        memset(vec, 0, sizeof(vec));
+        memset(senti, 0, sizeof(senti));
         for (int i = 0; i < 100000; ++i)
         {
             word1[i].weight = 0;
+            word1[i].str.clear();
         }
         map1.clear();
     }
@@ -146,25 +163,31 @@ public:
     {
         inputFile = vecFile + fileName + ".txt";
         inputClass = segFile + fileName + ".txt";
-        fp1 = fopen(inputFile.c_str(), "r");
-        fp2 = fopen(inputClass.c_str(), "r");
+        ifstream fp1, fp2;
+        fp1.open(inputFile.c_str());
+        fp2.open(inputClass.c_str());
 
         cout << inputFile << endl;
         cout <<inputClass <<endl;
 
-        while(fgets(st, sizeof(st), fp1))
+        while(getline(fp1, st))
         {
-            int i;
-            sscanf(st, "%d", &i);
-            fgets(st, sizeof(st), fp1);
-            fgets(s, sizeof(s), fp2);
+//            cout << "st1: " << st << endl;
+            istringstream fst;
+            int ts;
+            fst.str(st);
+            fst >> ts;
+            getline(fp1, st);
+//            cout << "st2: " << st << endl;
+            getline(fp2, s);
+//            cout << "s: " << s << endl;
             bool noise = checkNoise(s);
+//            printf ("Noise\n");
             if (noise)
                 continue;
-            deal(st, i, totalSentence);
+            deal(st, ts, totalSentence);
+//            printf ("Done\n");
         }
-        fclose(fp1);
-        fclose(fp2);
     }
 
     void print()
@@ -228,7 +251,7 @@ private:
         tmp *= exp((-1.0) * abs((double)(info->senti[y] - info->senti[x])) * alpha);
         return tmp;
     }
-    /* calculate the semantic distance of two sentences*/
+
     void initCluster()
     {
         for (int i = 0; i < info->totalSentence; ++i)
@@ -268,7 +291,7 @@ private:
         subgraph[y].num = 0;
         subgraph[y].val = 0;
     }
-	/* basic algorithm of dis-joint set*/
+
     void add(int u, int v, double val)
     {
         gra.to[gra.totE] = v;
@@ -281,7 +304,7 @@ private:
         graF.head[v] = graF.totE;
         graF.weight[graF.totE++] = val;
     }
-	/* add an edge into the graph*/
+
     void initGraph()
     {
         gra.totE = 0;
@@ -317,7 +340,7 @@ private:
             }
         }
     }
-	/* visit the Connected graph */
+
     double intraDis()
     {
         int K = 0;
@@ -421,7 +444,7 @@ public:
             }
         }
     }
-	/* Algorithm 1*/
+
     void buildGraph()
     {
         //cout << "startbuildgraph" << endl;
@@ -488,8 +511,6 @@ public:
            p[i] = p[i] * (double)colornum[color[i]] / mulnum;
        }
     }
-	/* calculate the weight of TSCs by Eq.(13)-(16) */
-	
     int lisC[5000][5000];
     //int Tcol[5000], totC, C[5000];
     double calH()
@@ -500,7 +521,7 @@ public:
         printf("%f %f %f\n", itrd, ited, itrd / ited);
         return itrd / ited;
     }
-    /* calculate the H value to check the clustering effect*/
+
     ~SAG()
     {
 
@@ -515,7 +536,7 @@ void getTag(Info *info, SAG *sag)
     FILE * fp3;
     string file3;
     file3.clear();
-    file3 = tagFile + info->fileName + ".txt";
+    file3 = tagFile + info->fileName + "_dialogue" + ".txt";
     cout << file3 << endl;
     fp3 = fopen(file3.c_str(), "w");
     for (int i = 0; i < info->totalSentence; ++i)
