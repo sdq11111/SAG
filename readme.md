@@ -19,4 +19,4 @@ topic_center.cpp: The model with topic center-based cluster algorithm.
 A detailed explanation of the programs can be found in the program annotation.
 
 # Notice
-Occasionally, the program may occur an error: "Process returned -1073741819 (0xC0000005)",  but the reason is unknown. If it happens, just re-run it. If you know the reason for the error, please leave the message, thank you.
+This program only supports running under the Windows operating system. The full data set for the experiment could not be published due to copyright reasons. You can email sdq11111@sjtu.edu.cn to request part of the data.
